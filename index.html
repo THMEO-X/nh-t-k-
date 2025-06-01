@@ -1,0 +1,294 @@
+<!DOCTYPE html><html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>nhật kí của tôi</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }video.bg-video {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -1;
+  filter: brightness(0.4);
+}
+
+audio.bg-audio {
+  display: none;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  color: white;
+}
+
+.sidebar {
+  width: 250px;
+  background: rgba(32, 33, 35, 0.95);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  transform: translateX(-100%);
+  position: absolute;
+  height: 100%;
+  z-index: 10;
+}
+
+.sidebar.active {
+  transform: translateX(0);
+}
+
+.toggle-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  font-size: 24px;
+  background: rgba(32, 33, 35, 0.8);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.folder-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 20px;
+}
+
+.folder {
+  background: #343541;
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.folder.active {
+  background: black;
+}
+
+.add-folder {
+  display: flex;
+  gap: 6px;
+}
+
+.add-folder input {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+}
+
+.add-folder button {
+  padding: 6px 10px;
+  border: none;
+  background: #10a37f;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.main {
+  flex: 1;
+  padding: 70px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.chat-header {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.message {
+  background: transparent;
+  color:white;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.2);
+  backdrop-filter: blur(3px);
+}
+
+.input-area {
+  display: flex;
+  gap: 10px;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.input-area button {
+  padding: 12px 16px;
+  background: gray;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+  </style>
+</head>
+<body><video class="bg-video" autoplay loop muted>
+  <source src="snaptik_7438948657090546952_hd.mp4" type="video/mp4" />
+  Trình duyệt không hỗ trợ video nền.
+</video><audio class="bg-audio" autoplay loop>
+  <source src="https://www.fesliyanstudios.com/play-mp3/387" type="audio/mp3" />
+</audio><div class="app">
+  <button class="toggle-btn" onclick="toggleSidebar()">☰</button>  <div class="sidebar" id="sidebar">
+    <h2>Thư mục</h2>
+    <div class="folder-list" id="folderList"></div>
+    <div class="add-folder">
+      <input type="text" id="newFolderInput" placeholder="Tên thư mục..." />
+      <button id="addFolderBtn">+</button>
+    </div>
+  </div>  <div class="main">
+    <div class="chat-header" id="currentFolderTitle">Chọn thư mục</div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area" id="inputArea" style="display:none;">
+      <input type="text" id="textInput" placeholder="Nhập tin nhắn..." />
+      <button onclick="sendMessage()">Gửi</button>
+      <button onclick="deleteMode()">🗑️</button>
+    </div>
+  </div>
+</div><script>
+  const sidebar = document.getElementById('sidebar');
+  const folderList = document.getElementById('folderList');
+  const messagesDiv = document.getElementById('messages');
+  const newFolderInput = document.getElementById('newFolderInput');
+  const addFolderBtn = document.getElementById('addFolderBtn');
+  const currentFolderTitle = document.getElementById('currentFolderTitle');
+  const textInput = document.getElementById('textInput');
+  const inputArea = document.getElementById('inputArea');
+
+  let folders = JSON.parse(localStorage.getItem('folders') || '[]');
+  let currentFolder = null;
+
+  function toggleSidebar() {
+    sidebar.classList.toggle('active');
+  }
+
+  function saveFolders() {
+    localStorage.setItem('folders', JSON.stringify(folders));
+  }
+
+  function renderFolders() {
+    folderList.innerHTML = '';
+    folders.forEach(folder => {
+      const div = document.createElement('div');
+      div.textContent = folder;
+      div.className = 'folder' + (folder === currentFolder ? ' active' : '');
+      div.onclick = () => {
+        selectFolder(folder);
+        sidebar.classList.remove('active');
+      };
+      folderList.appendChild(div);
+    });
+  }
+
+  function selectFolder(folder) {
+    currentFolder = folder;
+    currentFolderTitle.textContent = 'Thư mục: ' + folder;
+    inputArea.style.display = 'flex';
+    renderFolders();
+    loadMessages();
+  }
+
+  function getMessages(folder) {
+    return JSON.parse(localStorage.getItem('chat_' + folder) || '[]');
+  }
+
+  function saveMessages(folder, messages) {
+    localStorage.setItem('chat_' + folder, JSON.stringify(messages));
+  }
+
+  function loadMessages() {
+    const messages = getMessages(currentFolder);
+    messagesDiv.innerHTML = '';
+    messages.forEach((m, i) => {
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.textContent = m;
+      div.onclick = () => {
+        if (deleteEnabled && confirm('Xoá tin nhắn này?')) {
+          messages.splice(i, 1);
+          saveMessages(currentFolder, messages);
+          loadMessages();
+        }
+      };
+      messagesDiv.appendChild(div);
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function sendMessage() {
+    const text = textInput.value.trim();
+    if (!text) return;
+    const messages = getMessages(currentFolder);
+    messages.push(text);
+    saveMessages(currentFolder, messages);
+    textInput.value = '';
+    loadMessages();
+  }
+
+  addFolderBtn.onclick = () => {
+    const name = newFolderInput.value.trim();
+    if (!name) return;
+    if (folders.includes(name)) return alert('Thư mục đã tồn tại');
+    folders.push(name);
+    saveFolders();
+    newFolderInput.value = '';
+    renderFolders();
+  };
+
+  let deleteEnabled = false;
+  function deleteMode() {
+    if (!currentFolder) return;
+    const choice = prompt("Gõ '1' để xoá tin nhắn, '2' để xoá thư mục hiện tại");
+    if (choice === '1') {
+      deleteEnabled = true;
+      alert('Chế độ xoá tin nhắn đã bật, hãy bấm vào tin nhắn để xoá.');
+    } else if (choice === '2') {
+      if (confirm('Xác nhận xoá toàn bộ thư mục này?')) {
+        localStorage.removeItem('chat_' + currentFolder);
+        folders = folders.filter(f => f !== currentFolder);
+        currentFolder = null;
+        saveFolders();
+        renderFolders();
+        messagesDiv.innerHTML = '';
+        currentFolderTitle.textContent = 'Chọn thư mục';
+        inputArea.style.display = 'none';
+      }
+    }
+  }
+
+  renderFolders();
+  if (folders.length > 0) selectFolder(folders[0]);
+</script></body>
+</html>
